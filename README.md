@@ -1,4 +1,6 @@
 # TECHIN515_Lab3
+# Overview
+This project implements a Harry Potter–style Sorting Hat using an ESP32-WROOM, four push buttons, and a 128x64 OLED display. Users answer ten multiple-choice questions by pressing buttons, and a pre-trained decision tree model predicts their Hogwarts house based on the responses. The result is displayed on the OLED screen and printed to the Serial Monitor.
 
 # Discussion
 Play with your sorting hat. Are all 10 questions important to create the sorting hat? If you were to remove some questions to improve user experience, which questions would you remove and justify your answer.
