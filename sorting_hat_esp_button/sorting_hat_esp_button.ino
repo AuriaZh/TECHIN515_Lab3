@@ -1,21 +1,21 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include "sorting_hat_model.h"
+#include "sorting_hat_model.h"  // Include the trained Decision Tree model
 
-// OLED 屏幕配置
+// OLED screen configuration
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET    -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// Button 引脚（适配 ESP32-WROOM）
+// Button pins for ESP32-WROOM
 #define BUTTON_A  32
 #define BUTTON_B  33
 #define BUTTON_C  25
 #define BUTTON_D  26
 
-// 问题和选项内容
+// Quiz questions
 const char* questions[] = {
     "1. What do you value?",
     "2. Someone cheats?",
@@ -29,6 +29,7 @@ const char* questions[] = {
     "10. Dream career?"
 };
 
+// Answer options for each question
 const char* options[][4] = {
     {"A) Bravery", "B) Loyalty", "C) Intelligence", "D) Ambition"},
     {"A) Call out", "B) Let go", "C) Tell teacher", "D) Gain from it"},
@@ -42,19 +43,23 @@ const char* options[][4] = {
     {"A) Auror", "B) Healer", "C) Scholar", "D) Minister"}
 };
 
+// Store user responses (1-4 per question)
 int responses[10] = {0};
 int questionIndex = 0;
+
+// Load ML decision tree classifier
 Eloquent::ML::Port::DecisionTree clf;
 
 void setup() {
     Serial.begin(115200);
 
-    // 初始化 OLED（使用默认 GPIO21/22）
+    // Initialize OLED display
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
         Serial.println("⚠️ OLED init failed. Check wiring.");
-        while (true);  // 卡死
+        while (true);  // Halt if OLED init fails
     }
 
+    // Show startup message
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(WHITE);
@@ -63,25 +68,29 @@ void setup() {
     display.display();
     delay(1500);
 
-    // 初始化按钮
+    // Initialize buttons as input with internal pull-ups
     pinMode(BUTTON_A, INPUT_PULLUP);
     pinMode(BUTTON_B, INPUT_PULLUP);
     pinMode(BUTTON_C, INPUT_PULLUP);
     pinMode(BUTTON_D, INPUT_PULLUP);
 
+    // Display the first question
     showQuestion();
 }
 
 void loop() {
+    // Continuously check for user input
     checkButtons();
 }
 
+// Display current question and options
 void showQuestion() {
     display.clearDisplay();
     display.setTextSize(1);
     display.setCursor(0, 0);
     display.println(questions[questionIndex]);
 
+    // Print all 4 options
     for (int i = 0; i < 4; i++) {
         display.setCursor(10, 20 + (i * 10));
         display.println(options[questionIndex][i]);
@@ -90,6 +99,7 @@ void showQuestion() {
     display.display();
 }
 
+// Check if a button was pressed and record response
 void checkButtons() {
     bool pressed = false;
 
@@ -107,10 +117,10 @@ void checkButtons() {
             responses[questionIndex] = 4;
             pressed = true;
         }
-        delay(20);
+        delay(20);  // Debounce delay
     }
 
-    // 等待按钮松开
+    // Wait until button is released before proceeding
     while (digitalRead(BUTTON_A) == LOW ||
            digitalRead(BUTTON_B) == LOW ||
            digitalRead(BUTTON_C) == LOW ||
@@ -121,15 +131,17 @@ void checkButtons() {
     nextQuestion();
 }
 
+// Go to next question or trigger classification
 void nextQuestion() {
     questionIndex++;
     if (questionIndex < 10) {
-        showQuestion();
+        showQuestion();  // Display next question
     } else {
-        classifyHouse();
+        classifyHouse();  // All responses collected, predict house
     }
 }
 
+// Use the ML model to predict the Hogwarts house
 void classifyHouse() {
     display.clearDisplay();
     display.setTextSize(1);
@@ -138,11 +150,16 @@ void classifyHouse() {
     display.display();
     delay(1000);
 
+    // Convert responses to float array for model input
     float features[10];
-    for (int i = 0; i < 10; i++) features[i] = (float)responses[i];
+    for (int i = 0; i < 10; i++) {
+        features[i] = (float)responses[i];
+    }
 
+    // Predict house (0–3)
     int house = clf.predict(features);
 
+    // Display result on screen
     display.clearDisplay();
     display.setTextSize(2);
     display.setCursor(0, 20);
@@ -157,6 +174,7 @@ void classifyHouse() {
 
     display.display();
 
+    // Log to Serial Monitor
     Serial.println("✅ Sorting complete!");
     Serial.print("Predicted House: ");
     switch (house) {
